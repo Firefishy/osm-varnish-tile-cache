@@ -1,0 +1,15 @@
+---
+- hosts: all
+  sudo: yes
+
+  tasks:
+  - name: Add apt-transport-https
+    apt: pkg=apt-transport-https state=present
+
+  - name: Add varnish repo key
+    apt_key: url=https://repo.varnish-cache.org/GPG-key.txt state=present
+
+  - name: Add varnish repo
+    apt_repository: repo='deb https://repo.varnish-cache.org/ubuntu/ trusty varnish-4.0' state=present
+
+  - apt: pkg=varnish state=present
