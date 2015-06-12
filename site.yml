@@ -1,10 +1,11 @@
 ---
 - hosts: all
+  gather_facts: yes
   sudo: yes
 
   tasks:
-  - name: Add apt-transport-https
-    apt: pkg=apt-transport-https state=present
+  - name: Add apt-transport-https package
+    apt: name=apt-transport-https state=present
 
   - name: Add varnish repo key
     apt_key: url=https://repo.varnish-cache.org/GPG-key.txt state=present
@@ -12,4 +13,39 @@
   - name: Add varnish repo
     apt_repository: repo='deb https://repo.varnish-cache.org/ubuntu/ trusty varnish-4.0' state=present
 
-  - apt: pkg=varnish state=present
+  - name: Add required packages
+    apt: name="{{ item }}" state=present
+    with_items:
+      - varnish
+      - libvarnishapi-dev
+      - git
+      - build-essential
+      - automake
+      - autogen
+      - libtool
+      - pkg-config
+      - python-docutils
+
+  - name: Stat libvmod_vsthrottle.so
+    stat: path=/usr/lib/varnish/vmods/libvmod_vsthrottle.so
+    register: stat_libvmod_vsthrottle
+
+  - name: Clone libvmod-vsthrottle.git repo
+    git:
+      repo:  https://github.com/varnish/libvmod-vsthrottle.git
+      dest:  /usr/src/libvmod-vsthrottle
+      force: yes
+    register: git_libvmod_vsthrottle
+
+  - name: libvmod-vsthrottle autogen + configure
+    shell: ./autogen.sh && ./configure
+    args:
+      chdir: /usr/src/libvmod-vsthrottle/
+    when: (git_libvmod_vsthrottle|changed or not stat_libvmod_vsthrottle.stat.exists)
+    register: config_libvmod_vsthrottle
+
+  - name: libvmod-vsthrottle compile + install
+    shell: make --jobs="{{ ansible_processor_vcpus }}" && make install
+    args:
+      chdir: /usr/src/libvmod-vsthrottle/
+    when: config_libvmod_vsthrottle|changed
