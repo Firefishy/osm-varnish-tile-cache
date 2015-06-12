@@ -25,7 +25,7 @@ Vagrant.configure(2) do |config|
     vb.customize ["modifyvm", :id, "--usbehci",             "off"] # Force No USB2
   end
 
-  box.vm.provider "lxc" do |lxc, override|
+  config.vm.provider "lxc" do |lxc, override|
     override.vm.box = "fgrehm/trusty64-lxc"
     lxc.customize 'cgroup.memory.limit_in_bytes', "1024M"
   end
